@@ -226,6 +226,122 @@ For **MySQL** restores::
     In case the version differs, you can try forcing a deployment reload by: ``sudo su - dsmr`` and then executing ``./post-deploy.sh``.
 
 
+How can I migrate from MySQL to PostgreSQL?
+-------------------------------------------
+
+.. warning::
+
+    This is only relevant for users still running ``dsmr-reader`` on MySQL/MariaDB.
+
+Start by :doc:`installing PostgreSQL as documented in chapter 1 in the installation guide<installation>`.
+
+Make sure you have enough diskspace before migrating. The following command will display the size of the MySQL database in MB.
+Execute it as ``root`` / ``sudo`` user::
+
+    sudo du -ms /var/lib/mysql/ 
+
+
+View the available disk space on your system::
+
+    df -h | grep dev
+    
+    
+This will display something similar as below and you'd (most likely) need to check the mount on ``/`` (indicated by ``<<<<<<<<<<`` in the example)::
+
+    Filesystem      Size  Used Avail Use% Mounted on
+    udev             10M     0   10M   0% /dev
+    tmpfs           185M   21M  165M  12% /run
+    /dev/mmcblk0p2   15G  3,0G   11G  22% /                   <<<<<<<<<<
+    tmpfs           463M  4,0K  463M   1% /dev/shm
+    tmpfs           5,0M  4,0K  5,0M   1% /run/lock
+    tmpfs           463M     0  463M   0% /sys/fs/cgroup
+    tmpfs           463M     0  463M   0% /tmp
+    /dev/mmcblk0p1  122M   53M   70M  44% /boot
+    /dev/sda1       7,3G  367M  6,6G   6% /data
+    tmpfs            93M     0   93M   0% /run/user/1001
+    tmpfs            93M     0   93M   0% /run/user/0
+
+
+In the example above the mount on ``/`` has ``11GB`` available. 
+Do not continue when you're not sure whether you have enough disk space available.
+
+Login as ``dsmr`` user::
+
+    sudo su - dsmr
+
+
+Now install the PostgreSQL database client::
+
+    pip3 install -r dsmrreader/provisioning/requirements/postgresql.txt
+
+
+Initialize the (empty) PostgreSQL database you've just created::
+
+    cp dsmrreader/provisioning/django/postgresql.py dsmrreader/temp_settings.py
+    
+    ./manage.py migrate --settings=dsmrreader.temp_settings
+    
+    rm dsmrreader/temp_settings.py
+    
+    
+Now comes the waiting part. Please note that this **could take quite some time**, depending on how much data you have and the hardware used.
+
+However, you should be able to run the migration without downtime and you may abort/restart the command multiple times, while keeping your source database collecting data.
+The migration command (the second one below) will continue where it left off before, each time it runs again.
+
+.. note::
+
+    After it's first completion, you should run the ``dsmr_migrate_mysql_data_to_postgresql`` command one more time, to copy any recent data inserted as well.
+
+Migrate data::
+    
+    cp dsmrreader/provisioning/django/mysql_to_postgresql.py dsmrreader/migration_settings.py
+    
+    ./manage.py dsmr_migrate_mysql_data_to_postgresql --settings=dsmrreader.migration_settings
+    
+    rm dsmrreader/migration_settings.py
+
+
+When completed, it's time to switch the application config to PostgreSQL::
+
+    cp dsmrreader/provisioning/django/postgresql.py dsmrreader/settings.py
+
+
+And now reload the application to apply changes::
+
+    ./post-deploy.sh
+
+
+You should now be running on PostgreSQL.
+
+- Please check the Status page whether data is being processed properly. The page also displays whether you are now running on PostgreSQL (indicated after the version number on the page). 
+- You should create or keep a **final backup of the MySQL database** before shutting it down and removing it's data.
+
+Due to technical reasons, any users created for the admin interface are **not** migrated. You can easily create a new user with::
+
+    ./manage.py createsuperuser --username admin --email root@localhost
+
+
+.. note::
+
+    In case anything went wrong, you can still easily go back to MySQL by restoring the previous config and reloading the application::
+
+        cp dsmrreader/provisioning/django/mysql.py dsmrreader/settings.py
+
+        ./post-deploy.sh
+
+
+.. warning::
+
+    **The next step below is irreversible if you do not have a backup of the MySQL data!**
+
+If you'd like to wipe MySQL from the system, go back to ``sudo`` / ``root`` user and execute::
+
+    sudo apt-get remove mariadb-server-10.0 libmysqlclient-dev
+    
+    sudo rm -r /var/lib/mysql
+
+
 Feature/bug report
 ------------------
 *How can I propose a feature or report a bug I've found?*
