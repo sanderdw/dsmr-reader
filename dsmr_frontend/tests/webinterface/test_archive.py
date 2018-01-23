@@ -1,8 +1,9 @@
 from unittest import mock
+from datetime import date
 
 from django.test import TestCase, Client
 from django.utils import timezone, formats
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 
 from dsmr_consumption.models.consumption import ElectricityConsumption, GasConsumption
@@ -43,6 +44,11 @@ class TestViews(TestCase):
         data = {
             'date': formats.date_format(timezone.now().date(), 'DSMR_DATEPICKER_DATE_FORMAT'),
         }
+
+        if self.support_data:
+            self.assertEqual(response.context['start_date'], date(2016, 1, 1))
+            self.assertEqual(response.context['end_date'], date(2016, 1, 2))
+
         for current_level in ('days', 'months', 'years'):
             # Test both with tariffs sparated and merged.
             for merge in (False, True):

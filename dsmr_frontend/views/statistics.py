@@ -21,9 +21,15 @@ class Statistics(TemplateView):
         context_data['capabilities'] = dsmr_backend.services.get_capabilities()
 
         try:
-            context_data['latest_reading'] = DsmrReading.objects.all().order_by('-pk')[0]
+            latest_reading = DsmrReading.objects.all().order_by('-pk')[0]
         except IndexError:
             pass
+        else:
+            context_data['latest_reading'] = latest_reading
+            context_data['delivered_sum'] = latest_reading.electricity_delivered_1 + \
+                latest_reading.electricity_delivered_2
+            context_data['returned_sum'] = latest_reading.electricity_returned_1 + \
+                latest_reading.electricity_returned_2
 
         today = timezone.localtime(timezone.now()).date()
         context_data['datalogger_settings'] = DataloggerSettings.get_solo()
@@ -40,13 +46,12 @@ class Statistics(TemplateView):
 class StatisticsXhrData(View):
     """ XHR view for fetching the dashboard header, displaying latest readings and price estimate, JSON response. """
     def get(self, request):
-        min_max_consumption_watt = dsmr_consumption.services.calculate_min_max_consumption_watt()
-
         data = {
             'total_reading_count': intcomma(DsmrReading.objects.all().count()),
             'slumber_consumption_watt': dsmr_consumption.services.calculate_slumber_consumption_watt(),
-            'min_consumption_watt': min_max_consumption_watt['min_watt'],
-            'max_consumption_watt': min_max_consumption_watt['max_watt'],
         }
+
+        min_max_consumption_watt = dsmr_consumption.services.calculate_min_max_consumption_watt()
+        data.update(min_max_consumption_watt)
 
         return HttpResponse(json.dumps(data), content_type='application/json')

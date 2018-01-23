@@ -3,8 +3,9 @@ import json
 
 from django.test import TestCase, Client
 from django.utils import timezone
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
+from django.db.models import F
 
 from dsmr_consumption.models.consumption import ElectricityConsumption, GasConsumption
 from dsmr_consumption.models.energysupplier import EnergySupplierPrice
@@ -13,6 +14,7 @@ from dsmr_datalogger.models.settings import DataloggerSettings
 from dsmr_weather.models.settings import WeatherSettings
 from dsmr_stats.models.statistics import DayStatistics
 from dsmr_frontend.models.message import Notification
+from dsmr_datalogger.models.reading import DsmrReading
 import dsmr_consumption.services
 
 
@@ -48,9 +50,6 @@ class TestViews(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('track_temperature', response.context)
 
-        if self.support_data:
-            self.assertIn('consumption', response.context)
-
     @mock.patch('django.utils.timezone.now')
     def test_dashboard_xhr_header(self, now_mock):
         now_mock.return_value = timezone.make_aware(timezone.datetime(2015, 11, 15))
@@ -82,6 +81,26 @@ class TestViews(TestCase):
                     self.assertEqual(
                         json_response['latest_electricity_cost'], '0.23' if current_tariff == 1 else '0.46'
                     )
+
+    def test_dashboard_xhr_header_future(self):
+        # Set timestamp to the future, so the view will reset the timestamp displayed to 'now'.
+        DsmrReading.objects.all().update(timestamp=F('timestamp') + timezone.timedelta(weeks=999))
+
+        response = self.client.get(
+            reverse('{}:dashboard-xhr-header'.format(self.namespace))
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response['Content-Type'], 'application/json')
+
+    def test_dashboard_xhr_consumption(self):
+        response = self.client.get(
+            reverse('{}:dashboard-xhr-consumption'.format(self.namespace))
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+
+        if self.support_data:
+            self.assertIn('consumption', response.context)
 
     @mock.patch('django.utils.timezone.now')
     def test_dashboard_xhr_graphs(self, now_mock):

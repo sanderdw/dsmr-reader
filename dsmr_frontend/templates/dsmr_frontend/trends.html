@@ -70,7 +70,7 @@
         <div class="col-md-12">
             <div class="panel" style="padding-bottom: 24px;">
                 <header class="panel-heading">
-                    {% blocktrans %}Electricity tariff ratio (passed week){% endblocktrans %}
+                    {% blocktrans %}Electricity tariff ratio (past week){% endblocktrans %}
                 </header>
                 <div class="panel-body" style="height: 350px;">
                     <canvas id="electricity-by-tariff-week-chart"></canvas>
@@ -82,7 +82,7 @@
         <div class="col-md-12">
             <div class="panel" style="padding-bottom: 24px;">
                 <header class="panel-heading">
-                    {% blocktrans %}Electricity tariff ratio (passed month){% endblocktrans %}
+                    {% blocktrans %}Electricity tariff ratio (past month){% endblocktrans %}
                 </header>
                 <div class="panel-body" style="height: 350px;">
                     <canvas id="electricity-by-tariff-month-chart"></canvas>
@@ -162,7 +162,7 @@
 	                        ],
 	                        borderWidth: 1,
 	                        data: [
-	                            {{ electricity_by_tariff_week.electricity2|floatformat:"0" }}
+	                        	electricity2
 	                        ],
 	                    },
 	                    {
@@ -175,7 +175,7 @@
 	                        ],
 	                        borderWidth: 1,
 	                        data: [
-	                            {{ electricity_by_tariff_week.electricity1|floatformat:"0" }}
+	                        	electricity1
 	                        ],
 	                    }
 	                ]
@@ -184,7 +184,7 @@
 	            var ctx = $("#" + chart_id).get(0).getContext("2d");
 	            ctx.canvas.height = $("#" + chart_id).parent().height();
 	            
-	            var chart_instance = new Chart(ctx, {
+	            new Chart(ctx, {
 	                type: 'bar',
 	                data: data,
 	                options: chart_options

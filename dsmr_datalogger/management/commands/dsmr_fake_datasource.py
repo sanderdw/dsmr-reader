@@ -40,6 +40,13 @@ class Command(InfiniteManagementCommandMixin, BaseCommand):
             default=False,
             help=_('Include electricity returned (solar panels)')
         )
+        parser.add_argument(
+            '--hour-offset',
+            action='store',
+            dest='hour_offset',
+            default=0,
+            help=_('The offset in hours, can both be positive as negative (to go back in time).')
+        )
 
     def run(self, **options):
         """ InfiniteManagementCommandMixin listens to handle() and calls run() in a loop. """
@@ -49,14 +56,19 @@ class Command(InfiniteManagementCommandMixin, BaseCommand):
         if not options.get('acked_warning'):
             raise CommandError(_('Intended usage is NOT production! Force by using --ack-to-mess-up-my-data'))
 
-        telegram = self._generate_data(options['with_gas'], options['with_electricity_returned'])
+        telegram = self._generate_data(
+            options['with_gas'],
+            options['with_electricity_returned'],
+            options['hour_offset']
+        )
         print(telegram)  # For convenience
 
         dsmr_datalogger.services.telegram_to_reading(data=telegram)
 
-    def _generate_data(self, with_gas, with_electricity_returned):
+    def _generate_data(self, with_gas, with_electricity_returned, hour_offset):
         """ Generates 'random' data, but in a way that it keeps incrementing. """
-        now = timezone.localtime(timezone.now())  # Must be local.
+        now = timezone.now() + timezone.timedelta(hours=int(hour_offset))
+        now = timezone.localtime(now)  # Must be local.
 
         self.stdout.write('-' * 32)
         self.stdout.write(str(now))
@@ -66,7 +78,8 @@ class Command(InfiniteManagementCommandMixin, BaseCommand):
         self.stdout.write('')
 
         # 1420070400: 01 Jan 2015 00:00:00 GMT
-        second_since = int(time.time() - 1420070400)
+        current_unix_time = time.mktime(now.timetuple())
+        second_since = int(current_unix_time - 1420070400)
         electricity_base = second_since * 0.00005  # Averages around 1500/1600 kWh for a year.
 
         electricity_1 = electricity_base
@@ -80,7 +93,7 @@ class Command(InfiniteManagementCommandMixin, BaseCommand):
 
         if with_electricity_returned:
             electricity_1_returned = electricity_1 * 0.1  # Random though of solar panel during night.
-            electricity_2_returned = electricity_1 * 1.05  # Random number.
+            electricity_2_returned = electricity_1 * 1.25  # Random number.
             currently_returned = random.randint(0, 2500) * 0.001  # kW
 
         data = [
@@ -112,12 +125,12 @@ class Command(InfiniteManagementCommandMixin, BaseCommand):
             "1-0:31.7.0(000*A)\r\n",
             "1-0:51.7.0(000*A)\r\n",
             "1-0:71.7.0(001*A)\r\n",
-            "1-0:21.7.0(00.000*kW)\r\n",
-            "1-0:41.7.0(00.000*kW)\r\n",
+            "1-0:21.7.0({}*kW)\r\n".format(self._round_precision(currently_delivered * 0.5, 6)),
+            "1-0:41.7.0({}*kW)\r\n".format(self._round_precision(currently_delivered * 0.75, 6)),
             "1-0:61.7.0({}*kW)\r\n".format(self._round_precision(currently_delivered, 6)),
-            "1-0:22.7.0(00.000*kW)\r\n",
-            "1-0:42.7.0(00.000*kW)\r\n",
-            "1-0:62.7.0(00.000*kW)\r\n",
+            "1-0:22.7.0({}*kW)\r\n".format(self._round_precision(currently_returned * 0.5, 6)),
+            "1-0:42.7.0({}*kW)\r\n".format(self._round_precision(currently_returned * 0.75, 6)),
+            "1-0:62.7.0({}*kW)\r\n".format(self._round_precision(currently_returned, 6)),
         ]
 
         if with_gas:

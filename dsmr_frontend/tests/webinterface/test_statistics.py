@@ -1,9 +1,10 @@
 from unittest import mock
+from decimal import Decimal
 import json
 
 from django.test import TestCase, Client
 from django.utils import timezone
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 
 from dsmr_consumption.models.consumption import ElectricityConsumption, GasConsumption
@@ -42,6 +43,10 @@ class TestViews(TestCase):
 
         if DsmrReading.objects.exists():
             self.assertIn('latest_reading', response.context)
+            self.assertIn('delivered_sum', response.context)
+            self.assertIn('returned_sum', response.context)
+            self.assertEqual(response.context['delivered_sum'], Decimal('1059.250'))
+            self.assertEqual(response.context['returned_sum'], Decimal('124.356'))
 
     def test_statistics_xhr_data(self):
         response = self.client.get(
@@ -52,9 +57,14 @@ class TestViews(TestCase):
 
         json_response = json.loads(response.content.decode("utf-8"))
         self.assertIn('total_reading_count', json_response)
-        self.assertIn('slumber_consumption_watt', json_response)
-        self.assertIn('min_consumption_watt', json_response)
-        self.assertIn('max_consumption_watt', json_response)
+
+        if self.support_data:
+            self.assertIn('slumber_consumption_watt', json_response)
+            self.assertIn('total_min', json_response)
+            self.assertIn('total_max', json_response)
+            self.assertIn('l1_max', json_response)
+            self.assertIn('l2_max', json_response)
+            self.assertIn('l3_max', json_response)
 
 
 class TestViewsWithoutData(TestViews):

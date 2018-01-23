@@ -6,13 +6,21 @@ DSMR Reader's documentation
    
    intro
    screenshots
+   requirements
    installation
    application
    settings
+   retention
    api
-   troubleshooting
+   mqtt
+   mindergas
+   pvoutput
+   dropbox
+   notifications
    faq
+   troubleshooting
    changelog
    contributing
    credits
+   donations
    licence

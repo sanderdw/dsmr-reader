@@ -48,6 +48,8 @@ INSTALLED_APPS = (
     # Third party apps/plugins.
     'solo.apps.SoloAppConfig',
     'colorfield',
+    'django_filters',
+    'rest_framework',
 
     # Local project apps.
     'dsmr_api.apps.AppConfig',
@@ -60,15 +62,19 @@ INSTALLED_APPS = (
     'dsmr_backup.apps.AppConfig',
     'dsmr_mindergas.apps.AppConfig',
     'dsmr_notification.apps.AppConfig',
+    'dsmr_mqtt.apps.AppConfig',
+    'dsmr_pvoutput.apps.AppConfig',
 )
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
+    # Debug toolbar.
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -100,7 +106,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'dsmrreader.wsgi.application'
 
-LOGIN_URL = 'admin/login/'
+LOGIN_URL = 'admin:login'
+LOGOUT_URL = 'admin:logout'
 
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
@@ -154,10 +161,34 @@ LANGUAGES = (
 LOCALE_PATHS = (os.path.join(BASE_DIR, 'locales'), )
 
 
+""" Django Rest Framework. """
+
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': (
+        'rest_framework.filters.OrderingFilter',
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'dsmr_api.authentication.HeaderAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 25,
+}
+
+
 """ DSMR Project settings. """
 
 DSMRREADER_SUPPORTED_DB_VENDORS = ('postgresql', 'mysql')
 
+DSMRREADER_BACKUP_PG_DUMP = 'pg_dump'
+DSMRREADER_BACKUP_MYSQLDUMP = 'mysqldump'
+DSMRREADER_BACKUP_SQLITE = 'sqlite3'
 DSMRREADER_BACKUP_DIRECTORY = 'backups'  # Relative to project root.
 DSMRREADER_DROPBOX_SYNC_INTERVAL = 1  # Only check for changes once per hour.
 
@@ -166,3 +197,15 @@ DSMRREADER_MANAGEMENT_COMMANDS_PID_FOLDER = '/var/tmp/'
 DSMRREADER_VERSION = dsmrreader.__version__
 DSMRREADER_RAW_VERSION = dsmrreader.VERSION
 DSMRREADER_LATEST_VERSION_FILE = 'https://raw.githubusercontent.com/dennissiemensma/dsmr-reader/master/dsmrreader/__init__.py'
+
+DSMRREADER_REST_FRAMEWORK_API_USER = 'api-user'
+
+# Sleep durations for infinity processes. Update these in your own config if you wish to alter them.
+DSMRREADER_BACKEND_SLEEP = 1
+DSMRREADER_DATALOGGER_SLEEP = 0.25
+
+# Whether telegrams are logged, in base64 format. Only required for debugging.
+DSMRREADER_LOG_TELEGRAMS = False
+
+# Whether the backend process (and datalogger) reconnects to the DB after each run.
+DSMRREADER_RECONNECT_DATABASE = True

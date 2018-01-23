@@ -63,7 +63,7 @@ class TestDatalogger(InterceptStdoutMixin, TestCase):
         serial_open_mock.return_value = None
         serial_readline_mock.side_effect = self._dsmr_dummy_data()
 
-        self._intercept_command_stdout('dsmr_datalogger')
+        self._intercept_command_stdout('dsmr_datalogger', run_once=True)
         self.assertTrue(DsmrReading.objects.exists())
 
     def test_reading_creation(self):
@@ -111,3 +111,9 @@ class TestDatalogger(InterceptStdoutMixin, TestCase):
         self.assertEqual(meter_statistics.voltage_swell_count_l1, 0)
         self.assertEqual(meter_statistics.voltage_swell_count_l2, 0)
         self.assertEqual(meter_statistics.voltage_swell_count_l3, 0)
+
+    @mock.patch('dsmr_datalogger.signals.raw_telegram.send_robust')
+    def test_raw_telegram_signal_sent(self, signal_mock):
+        self.assertFalse(signal_mock.called)
+        self._fake_dsmr_reading()
+        self.assertTrue(signal_mock.called)

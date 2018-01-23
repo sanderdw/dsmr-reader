@@ -11,7 +11,7 @@ from dsmr_backend.tests.mixins import InterceptStdoutMixin
 from dsmr_datalogger.models.settings import DataloggerSettings
 from dsmr_datalogger.models.reading import DsmrReading
 from dsmr_datalogger.models.statistics import MeterStatistics
-from dsmr_datalogger.exceptions import InvalidTelegramChecksum
+from dsmr_datalogger.exceptions import InvalidTelegramError
 import dsmr_datalogger.services
 
 
@@ -24,7 +24,7 @@ class TestDsmrDataloggerTracking(InterceptStdoutMixin, TestCase):
 
         # Datalogger should crash with error.
         with self.assertRaisesMessage(CommandError, 'Datalogger tracking is DISABLED!'):
-            self._intercept_command_stdout('dsmr_datalogger')
+            self._intercept_command_stdout('dsmr_datalogger', run_once=True)
 
 
 class TestServices(TestCase):
@@ -280,17 +280,23 @@ class TestServices(TestCase):
             "!D19A\n",
         ]
 
-        with self.assertRaises(InvalidTelegramChecksum):
+        with self.assertRaises(InvalidTelegramError):
             # Empty.
             dsmr_datalogger.services.verify_telegram_checksum(data='')
 
-        with self.assertRaises(InvalidTelegramChecksum):
+        with self.assertRaises(InvalidTelegramError):
             # Invalid checksum.
             dsmr_datalogger.services.verify_telegram_checksum(data=''.join(telegram))
 
         # Again, with the correct checksum.
         telegram[-1] = "!58C8\n"
         dsmr_datalogger.services.verify_telegram_checksum(data=''.join(telegram))
+
+    @mock.patch('django.conf.settings.DSMRREADER_LOG_TELEGRAMS')
+    def test_telegram_logging_setting_coverage(self, settings_mock):
+        """ Purely a coverage test. """
+        settings_mock.return_value = True
+        dsmr_datalogger.services.telegram_to_reading(data=self.fake_telegram)
 
 
 class TestDsmrVersionMapping(InterceptStdoutMixin, TestCase):

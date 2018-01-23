@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 import urllib.request
+from decimal import Decimal
 
 from django.utils import timezone
 
@@ -32,8 +33,17 @@ def read_weather():
 
     weather_settings = WeatherSettings.get_solo()
 
-    # Fetch XML from API.
-    request = urllib.request.urlopen(BUIENRADAR_API_URL)
+    try:
+        # Fetch XML from API.
+        request = urllib.request.urlopen(BUIENRADAR_API_URL)
+    except Exception as e:
+        print(' [!] Failed reading temperature: {}'.format(e))
+
+        # Try again in 5 minutes.
+        weather_settings.next_sync = timezone.now() + timezone.timedelta(minutes=5)
+        weather_settings.save()
+        return
+
     response_bytes = request.read()
     request.close()
     response_string = response_bytes.decode("utf8")
@@ -45,12 +55,19 @@ def read_weather():
     )
     temperature_element = root.find(xpath)
     temperature = temperature_element.text
+    print(' - Read temperature: {}'.format(temperature))
 
     # Gas readings trigger these readings, so the 'read at' timestamp should be somewhat in sync.
     # Therefor we align temperature readings with them, having them grouped by hour that is..
     read_at = timezone.now().replace(minute=0, second=0, microsecond=0)
-    TemperatureReading.objects.create(read_at=read_at, degrees_celcius=temperature)
 
-    # Push next sync back for an hour.
-    weather_settings.next_sync = read_at + timezone.timedelta(hours=1)
+    try:
+        TemperatureReading.objects.create(read_at=read_at, degrees_celcius=Decimal(temperature))
+    except Exception:
+        # Try again in 5 minutes.
+        weather_settings.next_sync = timezone.now() + timezone.timedelta(minutes=5)
+    else:
+        # Push next sync back for an hour.
+        weather_settings.next_sync = read_at + timezone.timedelta(hours=1)
+
     weather_settings.save()

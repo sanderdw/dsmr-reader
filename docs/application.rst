@@ -69,6 +69,15 @@ Data preservation & backups
 Everything OK? Congratulations, this was the hardest part and now the fun begins by monitoring your energy consumption.
 
 
+Optional: Setting up an USB drive for backups
+---------------------------------------------
+
+.. seealso::
+    
+    For more information about (optionally) setting up an USB drive for backups, see `Data preservation/backups #268 <https://github.com/dennissiemensma/dsmr-reader/issues/268>`_.
+
+
+
 Application updates (bug fixes & new features)
 ----------------------------------------------
 
@@ -92,11 +101,18 @@ Public webinterface warning
 
 - You should also have Nginx restrict application access when exposing it to the Internet. Simply generate an htpasswd string `using one of the many generators found online <https://www.transip.nl/htpasswd/>`_. 
 
+- Paste the htpasswd string in ``/etc/nginx/htpasswd``.
+
 .. warning::
     
-    It's safe to a htpasswd generator, **just make sure to NEVER enter personal credentials** there **used for other applications or personal accounts**. 
+    It's safe to a htpasswd generator, **just make sure to NEVER enter personal credentials** there **used for other applications or personal accounts**.
+    
+.. seealso::
+    
+    Alternatively you can generate a ``htpasswd`` file locally, by installing ``sudo apt-get install apache2-utils`` and running ``sudo htpasswd -c /etc/nginx/htpasswd USERNAME`` (where ``USERNAME`` is your desired username).
+    
+    The command will prompt you to enter a password for it. 
 
-- Paste the htpasswd string in ``/etc/nginx/htpasswd``.
 
 - Open the site's vhost in ``/etc/nginx/sites-enabled/dsmr-webinterface`` and **uncomment** the following lines (remove the ##)::
 

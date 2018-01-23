@@ -62,6 +62,15 @@ class ElectricityConsumption(models.Model):
         db_index=True
     )
 
+    def __sub__(self, other):
+        """ Allows models to be subtracted from each other. """
+        data = {}
+
+        for current in ('delivered_1', 'returned_1', 'delivered_2', 'returned_2'):
+            data.update({current: getattr(self, current) - getattr(other, current)})
+
+        return data
+
     def __str__(self):
         return '{} | {}: {} Watt'.format(
             self.__class__.__name__, self.read_at, self.currently_delivered * 1000
@@ -74,7 +83,7 @@ class ElectricityConsumption(models.Model):
 
 
 class GasConsumption(models.Model):
-    """ Interpolated gas reading, containing the actualy usage, based on the reading before (if any). """
+    """ Interpolated gas reading, containing the actual usage, based on the reading before (if any). """
     read_at = models.DateTimeField(unique=True)
     delivered = models.DecimalField(
         max_digits=9,

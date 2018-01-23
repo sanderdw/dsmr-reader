@@ -55,10 +55,10 @@ def create():
     if connection.vendor == 'postgresql':  # pragma: no cover
         backup_process = subprocess.Popen(
             [
-                'pg_dump',
+                settings.DSMRREADER_BACKUP_PG_DUMP,
                 '--host={}'.format(settings.DATABASES['default']['HOST']),
                 '--user={}'.format(settings.DATABASES['default']['USER']),
-                '--dbname={}'.format(settings.DATABASES['default']['NAME']),
+                settings.DATABASES['default']['NAME'],
             ], env={
                 'PGPASSWORD': settings.DATABASES['default']['PASSWORD']
             },
@@ -68,7 +68,7 @@ def create():
     elif connection.vendor == 'mysql':  # pragma: no cover
         backup_process = subprocess.Popen(
             [
-                'mysqldump',
+                settings.DSMRREADER_BACKUP_MYSQLDUMP,
                 '--compress',
                 '--hex-blob',
                 '--extended-insert',
@@ -84,7 +84,7 @@ def create():
     elif connection.vendor == 'sqlite':  # pragma: no cover
         backup_process = subprocess.Popen(
             [
-                'sqlite3',
+                settings.DSMRREADER_BACKUP_SQLITE,
                 settings.DATABASES['default']['NAME'],
                 '.dump',
             ],

@@ -1,7 +1,7 @@
 import io
 
 from django.test import TestCase, Client
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import User
 
 from dsmr_consumption.models.consumption import ElectricityConsumption, GasConsumption
@@ -35,7 +35,7 @@ class TestViews(TestCase):
         response = self.client.get(view_url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
-            response['Location'], 'admin/login/?next={}'.format(view_url)
+            response['Location'], '/admin/login/?next={}'.format(view_url)
         )
 
         # Login and retest
@@ -58,7 +58,7 @@ class TestViews(TestCase):
         response = self.client.post(view_url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
-            response['Location'], 'admin/login/?next={}'.format(view_url)
+            response['Location'], '/admin/login/?next={}'.format(view_url)
         )
 
         # Login and retest, without post data.

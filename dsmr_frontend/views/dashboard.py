@@ -36,15 +36,6 @@ class Dashboard(TemplateView):
         context_data['track_temperature'] = weather_settings.track
         context_data['notifications'] = Notification.objects.unread()
 
-        try:
-            latest_electricity = ElectricityConsumption.objects.all().order_by('-read_at')[0]
-        except IndexError:
-            # Don't even bother when no data available.
-            return context_data
-
-        context_data['consumption'] = dsmr_consumption.services.day_consumption(
-            day=timezone.localtime(latest_electricity.read_at).date()
-        )
         today = timezone.localtime(timezone.now()).date()
         context_data['month_statistics'] = dsmr_stats.services.month_statistics(target_date=today)
         return context_data
@@ -61,7 +52,13 @@ class DashboardXhrHeader(View):
             # Don't even bother when no data available.
             return HttpResponse(json.dumps(data), content_type='application/json')
 
-        data['timestamp'] = naturaltime(latest_reading.timestamp)
+        latest_timestamp = latest_reading.timestamp
+
+        # In case the smart meter is running a clock in the future.
+        if latest_timestamp > timezone.now():
+            latest_timestamp = timezone.now()
+
+        data['timestamp'] = naturaltime(latest_timestamp)
         data['currently_delivered'] = int(latest_reading.electricity_currently_delivered * 1000)
         data['currently_returned'] = int(latest_reading.electricity_currently_returned * 1000)
 
@@ -77,8 +74,8 @@ class DashboardXhrHeader(View):
         cost_per_hour = None
 
         tariff_map = {
-            1: prices.electricity_1_price,
-            2: prices.electricity_2_price,
+            1: prices.electricity_delivered_1_price,
+            2: prices.electricity_delivered_2_price,
         }
 
         try:
@@ -91,6 +88,28 @@ class DashboardXhrHeader(View):
             )
 
         return HttpResponse(json.dumps(data), content_type='application/json')
+
+
+class DashboardXhrConsumption(TemplateView):
+    """ XHR view for fetching consumption, HTML response. """
+    template_name = 'dsmr_frontend/fragments/dashboard-xhr-consumption.html'
+
+    def get_context_data(self, **kwargs):
+        context_data = super(DashboardXhrConsumption, self).get_context_data(**kwargs)
+        context_data['capabilities'] = dsmr_backend.services.get_capabilities()
+        context_data['frontend_settings'] = FrontendSettings.get_solo()
+
+        try:
+            latest_electricity = ElectricityConsumption.objects.all().order_by('-read_at')[0]
+        except IndexError:
+            # Don't even bother when no data available.
+            return context_data
+
+        context_data['consumption'] = dsmr_consumption.services.day_consumption(
+            day=timezone.localtime(latest_electricity.read_at).date()
+        )
+
+        return context_data
 
 
 class DashboardXhrGraphs(View):
