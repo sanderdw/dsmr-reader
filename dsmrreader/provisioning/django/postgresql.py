@@ -6,8 +6,8 @@ from dsmrreader.config.production import *
 # Default settings, adjust if you use other ones, or use environment variables.
 DSMRREADER_NAME = 'dsmrreader'
 DSMRREADER_USER = 'dsmrreader'
-DSMRREADER_PASSWORD = 'dsmrreader'
-DSMRREADER_HOST = 'localhost'
+DSMRREADER_PASSWORD = '3eb9df4efe'
+DSMRREADER_HOST = '192.168.100.199'
 DSMRREADER_CONN_MAX_AGE = 60
 
 # Change me when exposing your application to the outside world using the Internet!
